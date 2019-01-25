@@ -62,65 +62,6 @@
       <div class="outer">
         <section id="main">
   
-    <article id="post-简易postGIS" class="article article-type-post" itemscope="" itemprop="blogPost">
-  <div class="article-meta">
-    <a href="/2019/01/25/简易postGIS/" class="article-date">
-  <time datetime="2019-01-25T10:02:39.000Z" itemprop="datePublished">2019-01-25</time>
-</a>
-    
-  </div>
-  <div class="article-inner">
-    
-    
-      <header class="article-header">
-        
-  
-    <h1 itemprop="name">
-      <a class="article-title" href="/2019/01/25/简易postGIS/">simple_postgis_01</a>
-    </h1>
-  
-
-      </header>
-    
-    <div class="article-entry" itemprop="articleBody">
-      
-        <h1 id="如何用sql实现地理坐标之间的距离查询、周边查询及范围查询？"><a href="#如何用sql实现地理坐标之间的距离查询、周边查询及范围查询？" class="headerlink" title="如何用sql实现地理坐标之间的距离查询、周边查询及范围查询？"></a>如何用sql实现地理坐标之间的距离查询、周边查询及范围查询？</h1><h2 id="基于postgresql的几何空间计算"><a href="#基于postgresql的几何空间计算" class="headerlink" title="基于postgresql的几何空间计算"></a>基于postgresql的几何空间计算</h2><p>postgresql提供了非常便捷的空间关系语法，常用的包括：<br>A与B的距离用“A <-> B”，<br>判断A在B之内用“A &lt;@ B”<br>其他包括平移、缩放、相接、上下、左右、平行、中心点、最近点等各种你能想到的空间关系，感觉非常适合用来支撑图形计算。具体参见：<a href="https://www.postgresql.org/docs/9.6/functions-geometry.html" target="_blank" rel="noopener">https://www.postgresql.org/docs/9.6/functions-geometry.html</a></-></p>
-<p>（1）计算两个点之间的距离：<br>点A：point(4, 3)<br>点B：point(10, 32)<br>sql如下：<br>select point(4, 3) <-> point(10, 32);</-></p>
-<p>（2）判断点A是否在面B之内：<br>点A：point ‘(1,1)’<br>面B：circle ‘((0,0),2)’<br>select point ‘(1,1)’ &lt;@ circle ‘((0,0),2)’ </p>
-<p>（3）查找距离线路3之内的所有点</p>
-<p>CREATE TABLE “test”.”bus_stop” (<br>  “id” int4 NOT NULL,<br>  “bus_stop” point,<br>  “stop_name” varchar(255) COLLATE “pg_catalog”.”default”<br>)<br>;</p>
-<p>CREATE TABLE “test”.”walk_line” (<br>  “id” int4 NOT NULL,<br>  “walk_line” path,<br>  “line_name” varchar(255) COLLATE “pg_catalog”.”default”<br>)<br>;</p>
-<p>SELECT<br>a.stop_name,<br>b.line_name,<br>a.bus_stop <-> b.walk_line as dist<br>from bus_stop as a,walk_line as b<br>where a.bus_stop <-> b.walk_line &lt; 3</-></-></p>
-<p>美中不足的是，postgresql只支持几何类型，不支持地理类型，也就是不支持经纬度。要支持经纬度，需要postgis插件的支持。</p>
-<h2 id="基于postgis的地理空间计算"><a href="#基于postgis的地理空间计算" class="headerlink" title="基于postgis的地理空间计算"></a>基于postgis的地理空间计算</h2><p>在postgis中有两种主要的数据类型，geometry和geography，常规功能优先使用geography类型。geometry是经典数据类型，功能非常强大，geography是postgis后来推出的数据类型，使用方便。两者之间的具体区别可见功能矩阵文档。</p>
-<p>建表：<br>CREATE TABLE ptgeogwgs(gid serial PRIMARY KEY, geog geography(POINT) );<br>INSERT INTO ptgeogwgs (gid, geog) VALUES (1,ST_GeogFromText(‘POINT(120.787 30.122)’));<br>INSERT INTO ptgeogwgs (gid, geog) VALUES (2,ST_GeogFromText(‘POINT(121.101 31.508)’));<br>SELECT gid,geog,st_astext(geog) from ptgeogwgs;</p>
-<p>点之间距离查询：<br>SELECT st_distance(p1.geog, p2.geog) from ptgeogwgs as p1,ptgeogwgs as p2 where p1.gid&gt;p2.gid ;</p>
-<p>周边查询：<br>SELECT p1.gid,p2.gid from ptgeogwgs as p1,ptgeogwgs as p2 where p1.gid&gt;p2.gid<br>and st_dwithin(p1.geog, p2.geog, 1000000)；</p>
-<p>点与线之间距离及周边查询：<br>create table linegeowgs (gid serial PRIMARY KEY, geog geography(LINESTRING));<br>INSERT INTO linegeowgs (gid, geog) VALUES (1,ST_GeogFromText(‘LINESTRING(121.11 31.22,121.22 31.13,121.33 31.433)’));<br>SELECT st_distance(p1.geog, p2.geog) from ptgeogwgs as p1,linegeowgs as p2<br>where st_dwithin(p1.geog,p2.geog,24000)</p>
-<p>相关概念的介绍：<br>点、线、面一般利用ST_GeogFromText从WKT(well known text)创建，常见的WKT有：</p>
-<ul>
-<li>POINT(0 0) ——点</li>
-<li>LINESTRING(0 0,1 1,1 2) ——线</li>
-<li>POLYGON((0 0,4 0,4 4,0 4,0 0),(1 1, 2 1, 2 2, 1 2,1 1)) ——面</li>
-</ul>
-<p>距离计算有多种方式，对geography来说直接使用st_distance可以满足需求，细节区别参见官方文档</p>
-<p>详细文档参见：<a href="https://postgis.net/docs/reference.html" target="_blank" rel="noopener">https://postgis.net/docs/reference.html</a></p>
-<h2 id="postgis的安装"><a href="#postgis的安装" class="headerlink" title="postgis的安装"></a>postgis的安装</h2><p>最便捷的安装方法莫过于docker：<br>docker pull mdillon/postgis:9.6<br>docker run –name postgis -p 5432:5432 -e POSTGRES_PASSWORD=12345 -d mdillon/postgis:9.6</p>
-<p>安装好直接可用，不需要再create extension postgis</p>
-
-      
-    </div>
-    <footer class="article-footer">
-      <a data-url="http://yoursite.com/2019/01/25/简易postGIS/" data-id="cjrbvwewy000260rxd05s0hqg" class="article-share-link">Share</a>
-      
-      
-    </footer>
-  </div>
-  
-</article>
-
-
-  
     <article id="post-hello-world" class="article article-type-post" itemscope="" itemprop="blogPost">
   <div class="article-meta">
     <a href="/2019/01/25/hello-world/" class="article-date">
@@ -156,7 +97,7 @@
       
     </div>
     <footer class="article-footer">
-      <a data-url="http://yoursite.com/2019/01/25/hello-world/" data-id="cjrbvwewk000060rxzqp3uyo0" class="article-share-link">Share</a>
+      <a data-url="http://yoursite.com/2019/01/25/hello-world/" data-id="cjrbw27ok0000tcrxbx6ebx5t" class="article-share-link">Share</a>
       
       
     </footer>
@@ -192,7 +133,7 @@
       
     </div>
     <footer class="article-footer">
-      <a data-url="http://yoursite.com/2018/12/03/my-new-Post/" data-id="cjrbvwewp000160rx42xo72fl" class="article-share-link">Share</a>
+      <a data-url="http://yoursite.com/2018/12/03/my-new-Post/" data-id="cjrbw27oq0001tcrx3xp199pf" class="article-share-link">Share</a>
       
       
     </footer>
@@ -230,10 +171,6 @@
     <h3 class="widget-title">Recent Posts</h3>
     <div class="widget">
       <ul>
-        
-          <li>
-            <a href="/2019/01/25/简易postGIS/">simple_postgis_01</a>
-          </li>
         
           <li>
             <a href="/2019/01/25/hello-world/">Hello World</a>
