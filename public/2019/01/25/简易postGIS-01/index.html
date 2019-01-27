@@ -3,19 +3,19 @@
 <head><meta name="generator" content="Hexo 3.8.0">
   <meta charset="utf-8">
   
-  <title>&#39;如何用sql实现地理坐标之间的距离查询、周边查询及范围查询？&#39; | Hexo</title>
+  <title>简易GIS（1） | Hexo</title>
   <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1">
-  <meta name="description" content="如何用sql实现地理坐标之间的距离查询、周边查询及范围查询？基于postgresql的几何空间计算postgresql提供了非常便捷的空间关系语法，常用的包括：A与B的距离用“A  B”，判断A在B之内用“A &amp;lt;@ B”其他包括平移、缩放、相接、上下、左右、平行、中心点、最近点等各种你能想到的空间关系，感觉非常适合用来支撑图形计算。具体参见：https://www.postgresql.or">
+  <meta name="description" content="如何用sql实现地理坐标之间的距离查询、周边查询及范围查询？进行空间查询的场景在app上或数据分析时，有时会用到与经纬度等坐标位置相关的周边查询，常见的需求主要涉及三种空间查询：  计算点之间的距离 计算点与线之间的距离 计算点与面之间的包含关系  有很多种方式可以实现这些需求，从便捷性、可靠性、高效率的角度，可以考虑sql方式。 基于postgresql的几何空间计算postgresql提供了便">
 <meta property="og:type" content="article">
-<meta property="og:title" content="&#39;如何用sql实现地理坐标之间的距离查询、周边查询及范围查询？&#39;">
+<meta property="og:title" content="简易GIS（1）">
 <meta property="og:url" content="http://yoursite.com/2019/01/25/简易postGIS-01/index.html">
 <meta property="og:site_name" content="Hexo">
-<meta property="og:description" content="如何用sql实现地理坐标之间的距离查询、周边查询及范围查询？基于postgresql的几何空间计算postgresql提供了非常便捷的空间关系语法，常用的包括：A与B的距离用“A  B”，判断A在B之内用“A &amp;lt;@ B”其他包括平移、缩放、相接、上下、左右、平行、中心点、最近点等各种你能想到的空间关系，感觉非常适合用来支撑图形计算。具体参见：https://www.postgresql.or">
+<meta property="og:description" content="如何用sql实现地理坐标之间的距离查询、周边查询及范围查询？进行空间查询的场景在app上或数据分析时，有时会用到与经纬度等坐标位置相关的周边查询，常见的需求主要涉及三种空间查询：  计算点之间的距离 计算点与线之间的距离 计算点与面之间的包含关系  有很多种方式可以实现这些需求，从便捷性、可靠性、高效率的角度，可以考虑sql方式。 基于postgresql的几何空间计算postgresql提供了便">
 <meta property="og:locale" content="default">
-<meta property="og:updated_time" content="2019-01-25T10:17:02.399Z">
+<meta property="og:updated_time" content="2019-01-27T15:08:14.937Z">
 <meta name="twitter:card" content="summary">
-<meta name="twitter:title" content="&#39;如何用sql实现地理坐标之间的距离查询、周边查询及范围查询？&#39;">
-<meta name="twitter:description" content="如何用sql实现地理坐标之间的距离查询、周边查询及范围查询？基于postgresql的几何空间计算postgresql提供了非常便捷的空间关系语法，常用的包括：A与B的距离用“A  B”，判断A在B之内用“A &amp;lt;@ B”其他包括平移、缩放、相接、上下、左右、平行、中心点、最近点等各种你能想到的空间关系，感觉非常适合用来支撑图形计算。具体参见：https://www.postgresql.or">
+<meta name="twitter:title" content="简易GIS（1）">
+<meta name="twitter:description" content="如何用sql实现地理坐标之间的距离查询、周边查询及范围查询？进行空间查询的场景在app上或数据分析时，有时会用到与经纬度等坐标位置相关的周边查询，常见的需求主要涉及三种空间查询：  计算点之间的距离 计算点与线之间的距离 计算点与面之间的包含关系  有很多种方式可以实现这些需求，从便捷性、可靠性、高效率的角度，可以考虑sql方式。 基于postgresql的几何空间计算postgresql提供了便">
   
     <link rel="alternate" href="/atom.xml" title="Hexo" type="application/atom+xml">
   
@@ -78,7 +78,7 @@
         
   
     <h1 class="article-title" itemprop="name">
-      &#39;如何用sql实现地理坐标之间的距离查询、周边查询及范围查询？&#39;
+      简易GIS（1）
     </h1>
   
 
@@ -86,7 +86,14 @@
     
     <div class="article-entry" itemprop="articleBody">
       
-        <h1 id="如何用sql实现地理坐标之间的距离查询、周边查询及范围查询？"><a href="#如何用sql实现地理坐标之间的距离查询、周边查询及范围查询？" class="headerlink" title="如何用sql实现地理坐标之间的距离查询、周边查询及范围查询？"></a>如何用sql实现地理坐标之间的距离查询、周边查询及范围查询？</h1><h2 id="基于postgresql的几何空间计算"><a href="#基于postgresql的几何空间计算" class="headerlink" title="基于postgresql的几何空间计算"></a>基于postgresql的几何空间计算</h2><p>postgresql提供了非常便捷的空间关系语法，常用的包括：<br>A与B的距离用“A <-> B”，<br>判断A在B之内用“A &lt;@ B”<br>其他包括平移、缩放、相接、上下、左右、平行、中心点、最近点等各种你能想到的空间关系，感觉非常适合用来支撑图形计算。具体参见：<a href="https://www.postgresql.org/docs/9.6/functions-geometry.html" target="_blank" rel="noopener">https://www.postgresql.org/docs/9.6/functions-geometry.html</a></-></p>
+        <h1 id="如何用sql实现地理坐标之间的距离查询、周边查询及范围查询？"><a href="#如何用sql实现地理坐标之间的距离查询、周边查询及范围查询？" class="headerlink" title="如何用sql实现地理坐标之间的距离查询、周边查询及范围查询？"></a>如何用sql实现地理坐标之间的距离查询、周边查询及范围查询？</h1><h2 id="进行空间查询的场景"><a href="#进行空间查询的场景" class="headerlink" title="进行空间查询的场景"></a>进行空间查询的场景</h2><p>在app上或数据分析时，有时会用到与经纬度等坐标位置相关的周边查询，常见的需求主要涉及三种空间查询：</p>
+<ul>
+<li>计算点之间的距离</li>
+<li>计算点与线之间的距离</li>
+<li>计算点与面之间的包含关系</li>
+</ul>
+<p>有很多种方式可以实现这些需求，从便捷性、可靠性、高效率的角度，可以考虑sql方式。</p>
+<h2 id="基于postgresql的几何空间计算"><a href="#基于postgresql的几何空间计算" class="headerlink" title="基于postgresql的几何空间计算"></a>基于postgresql的几何空间计算</h2><p>postgresql提供了便捷的空间关系语法，常用的包括：<br>A与B的距离用“A <-> B”，<br>判断A在B之内用“A &lt;@ B”<br>其他包括平移、缩放、相接、上下、左右、平行、中心点、最近点等各种你能想到的空间关系，感觉非常适合用来支撑图形计算。具体参见：<a href="https://www.postgresql.org/docs/9.6/functions-geometry.html" target="_blank" rel="noopener">https://www.postgresql.org/docs/9.6/functions-geometry.html</a></-></p>
 <p>（1）计算两个点之间的距离：<br>点A：point(4, 3)<br>点B：point(10, 32)<br>sql如下：<br>select point(4, 3) <-> point(10, 32);</-></p>
 <p>（2）判断点A是否在面B之内：<br>点A：point ‘(1,1)’<br>面B：circle ‘((0,0),2)’<br>select point ‘(1,1)’ &lt;@ circle ‘((0,0),2)’ </p>
 <p>（3）查找距离线路3之内的所有点</p>
@@ -113,7 +120,7 @@
       
     </div>
     <footer class="article-footer">
-      <a data-url="http://yoursite.com/2019/01/25/简易postGIS-01/" data-id="cjrbw6too0002gkrxv13x2yqy" class="article-share-link">Share</a>
+      <a data-url="http://yoursite.com/2019/01/25/简易postGIS-01/" data-id="cjrf1hhjq0002i4kko926e7x8" class="article-share-link">Share</a>
       
       
     </footer>
@@ -122,10 +129,19 @@
     
 <nav id="article-nav">
   
+    <a href="/2019/01/27/hello-world/" id="article-nav-newer" class="article-nav-link-wrap">
+      <strong class="article-nav-caption">Newer</strong>
+      <div class="article-nav-title">
+        
+          Hello World
+        
+      </div>
+    </a>
   
-    <a href="/2019/01/25/hello-world/" id="article-nav-older" class="article-nav-link-wrap">
+  
+    <a href="/2018/12/03/my-new-Post/" id="article-nav-older" class="article-nav-link-wrap">
       <strong class="article-nav-caption">Older</strong>
-      <div class="article-nav-title">Hello World</div>
+      <div class="article-nav-title">my new Post</div>
     </a>
   
 </nav>
@@ -162,11 +178,11 @@
       <ul>
         
           <li>
-            <a href="/2019/01/25/简易postGIS-01/">&#39;如何用sql实现地理坐标之间的距离查询、周边查询及范围查询？&#39;</a>
+            <a href="/2019/01/27/hello-world/">Hello World</a>
           </li>
         
           <li>
-            <a href="/2019/01/25/hello-world/">Hello World</a>
+            <a href="/2019/01/25/简易postGIS-01/">简易GIS（1）</a>
           </li>
         
           <li>

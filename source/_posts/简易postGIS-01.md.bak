@@ -1,5 +1,5 @@
 ---
-title: 简易GIS（1）
+title: '''如何用sql实现地理坐标之间的距离查询、周边查询及范围查询？'''
 date: 2019-01-25 18:16:24
 tags:
 ---
@@ -7,16 +7,8 @@ tags:
 # 如何用sql实现地理坐标之间的距离查询、周边查询及范围查询？
 
 
-## 进行空间查询的场景
-在app上或数据分析时，有时会用到与经纬度等坐标位置相关的周边查询，常见的需求主要涉及三种空间查询：
-- 计算点之间的距离
-- 计算点与线之间的距离
-- 计算点与面之间的包含关系
-
-有很多种方式可以实现这些需求，从便捷性、可靠性、高效率的角度，可以考虑sql方式。
-
 ## 基于postgresql的几何空间计算
-postgresql提供了便捷的空间关系语法，常用的包括：
+postgresql提供了非常便捷的空间关系语法，常用的包括：
 A与B的距离用“A <-> B”，
 判断A在B之内用“A <@ B”
 其他包括平移、缩放、相接、上下、左右、平行、中心点、最近点等各种你能想到的空间关系，感觉非常适合用来支撑图形计算。具体参见：https://www.postgresql.org/docs/9.6/functions-geometry.html
@@ -96,7 +88,5 @@ docker pull mdillon/postgis:9.6
 docker run --name postgis -p 5432:5432 -e POSTGRES_PASSWORD=12345 -d mdillon/postgis:9.6
 
 安装好直接可用，不需要再create extension postgis
-
-
 
 
